@@ -1,0 +1,64 @@
+SELECT 
+    CDate(Format(
+        IIf(
+            Hour(subquery.Время) < 1,
+            DateAdd("d", -1, subquery.Время),
+            subquery.Время
+        ),
+        "dd\.mm\.yyyy"
+    )) AS День,
+    IIf(
+        Hour(subquery.Время) < 1,
+        Format(DateAdd("d", -1, subquery.Время), "mmmm yyyy"),
+        Format(subquery.Время, "mmmm yyyy")
+    ) AS Месяц,
+    subquery.Объект,
+    Min(subquery.Время) AS Вход,
+    Max(subquery.Время) AS Выход,
+    Format(
+        (Max(subquery.Время) - Min(subquery.Время)),
+        "hh:nn:ss"
+    ) AS [Время на работе],
+    (DateDiff("s", Min(subquery.Время), Max(subquery.Время)) / 3600) AS [Часов на работе],
+    IIf(
+        DateDiff("n", TimeValue(#12/30/1899 9:0:0#), TimeValue(Min(subquery.Время))) >= 15,
+        'Опоздал',
+        IIf(
+            DateDiff("n", TimeValue(#12/30/1899 9:0:0#), TimeValue(Min(subquery.Время))) < 15 
+            And DateDiff("n", TimeValue(#12/30/1899 9:0:0#), TimeValue(Min(subquery.Время))) > 0,
+            'Задержался',
+            '✓'
+        )
+    ) AS [Статус прихода],
+    IIf(
+        (DateDiff("s", Min(subquery.Время), Max(subquery.Время)) / 3600) > 9,
+        'Да',
+        'Нет'
+    ) AS [В офисе >9 ч],
+    subquery.ФИО
+FROM 
+    (
+        SELECT DISTINCT * 
+        FROM 
+            (
+                SELECT * FROM bolid 
+                UNION ALL 
+                SELECT * FROM apacs
+            ) AS subquery
+    ) AS subquery
+GROUP BY 
+    CDate(Format(
+        IIf(
+            Hour(subquery.Время) < 1,
+            DateAdd("d", -1, subquery.Время),
+            subquery.Время
+        ),
+        "dd\.mm\.yyyy"
+    )),
+    IIf(
+        Hour(subquery.Время) < 1,
+        Format(DateAdd("d", -1, subquery.Время), "mmmm yyyy"),
+        Format(subquery.Время, "mmmm yyyy")
+    ),
+    subquery.Объект,
+    subquery.ФИО;
