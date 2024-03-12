@@ -1,0 +1,64 @@
+SELECT 
+    CDate(Format(
+        IIf(
+            Hour(subquery.Time) < 1,
+            DateAdd("d", -1, subquery.Time),
+            subquery.Time
+        ),
+        "dd\.mm\.yyyy"
+    )) AS Day,
+    IIf(
+        Hour(subquery.Time) < 1,
+        Format(DateAdd("d", -1, subquery.Time), "mmmm yyyy"),
+        Format(subquery.Time, "mmmm yyyy")
+    ) AS Month,
+    subquery.Object,
+    Min(subquery.Time) AS Entry,
+    Max(subquery.Time) AS Exit,
+    Format(
+        (Max(subquery.Time) - Min(subquery.Time)),
+        "hh:nn:ss"
+    ) AS [Time at work],
+    (DateDiff("s", Min(subquery.Time), Max(subquery.Time)) / 3600) AS [Hours at work],
+    IIf(
+        DateDiff("n", TimeValue(#12/30/1899 9:0:0#), TimeValue(Min(subquery.Time))) >= 15,
+        'Late',
+        IIf(
+            DateDiff("n", TimeValue(#12/30/1899 9:0:0#), TimeValue(Min(subquery.Time))) < 15 
+            And DateDiff("n", TimeValue(#12/30/1899 9:0:0#), TimeValue(Min(subquery.Time))) > 0,
+            'Delayed',
+            '✓'
+        )
+    ) AS [Entry status],
+    IIf(
+        (DateDiff("s", Min(subquery.Time), Max(subquery.Time)) / 3600) > 9,
+        'Yes',
+        'No'
+    ) AS [In office >9 h],
+    subquery.Name
+FROM 
+    (
+        SELECT DISTINCT * 
+        FROM 
+            (
+                SELECT * FROM bolid 
+                UNION ALL 
+                SELECT * FROM apacs
+            ) AS subquery
+    ) AS subquery
+GROUP BY 
+    CDate(Format(
+        IIf(
+            Hour(subquery.Time) < 1,
+            DateAdd("d", -1, subquery.Time),
+            subquery.Time
+        ),
+        "dd\.mm\.yyyy"
+    )),
+    IIf(
+        Hour(subquery.Time) < 1,
+        Format(DateAdd("d", -1, subquery.Time), "mmmm yyyy"),
+        Format(subquery.Time, "mmmm yyyy")
+    ),
+    subquery.Object,
+    subquery.Name;
